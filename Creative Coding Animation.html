@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ASCII Video Filter</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"></script>
+</head>
+<body style="background-color: black; margin: 0; color: white;">
+  <script>
+    let video;
+    let asciiDiv;
+    let input;
+    let playButton;
+    let playing = false;
+
+    function setup() {
+      noCanvas();
+      frameRate(10);
+
+      asciiDiv = createDiv();
+      asciiDiv.style('white-space', 'pre');
+      asciiDiv.style('font-family', 'monospace');
+      asciiDiv.style('line-height', '7px');
+      asciiDiv.style('font-size', '7px');
+      asciiDiv.style('color', 'white');
+      asciiDiv.style('background-color', 'black');
+      asciiDiv.style('padding', '10px');
+      asciiDiv.style('overflow-x', 'auto');
+      asciiDiv.style('max-width', '100vw');
+      asciiDiv.style('max-height', '90vh');
+      asciiDiv.style('overflow-y', 'scroll');
+
+      input = createFileInput(handleFile);
+      input.position(10, 10);
+
+      playButton = createButton("▶️ Play");
+      playButton.position(10, 40);
+      playButton.mousePressed(() => {
+        if (video && !playing) {
+          video.loop();
+          playing = true;
+          playButton.hide();
+        }
+      });
+      playButton.hide();
+    }
+
+    function handleFile(file) {
+      if (file.type === 'video') {
+        if (video) {
+          video.remove();
+          playing = false;
+        }
+
+        video = createVideo([file.data], () => {
+          video.hide();
+        });
+
+        video.elt.addEventListener('loadedmetadata', () => {
+          const aspect = video.elt.videoWidth / video.elt.videoHeight;
+          const charAspect = 0.6;
+          const targetHeight = 60;
+          const targetWidth = int(targetHeight * aspect / charAspect);
+          video.size(targetWidth, targetHeight);
+          playButton.show();
+        });
+      }
+    }
+
+    function draw() {
+      if (!video || !playing || video.width === 0 || video.height === 0) return;
+
+      video.loadPixels();
+      if (video.pixels.length === 0) return;
+
+      let asciiImage = '';
+      let density = 'Ñ@#W$9876543210?!abc;:+=-,._ ';
+
+      for (let y = 0; y < video.height; y++) {
+        for (let x = 0; x < video.width; x++) {
+          let index = (x + y * video.width) * 4;
+          let r = video.pixels[index + 0];
+          let g = video.pixels[index + 1];
+          let b = video.pixels[index + 2];
+          let brightness = (r + g + b) / 3;
+          let charIndex = floor(map(brightness, 0, 255, 0, density.length));
+          let c = density.charAt(charIndex);
+          asciiImage += c;
+        }
+        asciiImage += '\n';
+      }
+
+      asciiDiv.html(`<pre>${asciiImage}</pre>`);
+    }
+  </script>
+</body>
+</html>
